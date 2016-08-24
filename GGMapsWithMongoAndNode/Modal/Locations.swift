@@ -93,6 +93,54 @@ class Locations: NSObject {
 //    }
     
     func persist(location: Location) {
+        if location.name == nil || location.name.characters.count == 0 {
+            //input safety check
+            return
+        }
+        do {
+            let locations = try URL(fileURLWithPath: kBaseURL).appendingPathComponent(kLocations).absoluteString
+            
+            let isExistingLocation = location.id != nil
+            
+            //There are two endpoints for saving an object:
+            // /locations when you’re adding a new location, and
+            // /locations/_id when updating an existing location that already has an id
+            let url = isExistingLocation ? try URL(string: URL(fileURLWithPath: locations!).appendingPathComponent(location.id).absoluteString!) : URL(string: locations!)
+            
+            let request = NSMutableURLRequest(url: url!)
+            
+            //The request uses either PUT for existing objects or POST for new objects.
+            //The server code calls the appropriate handler for the route rather than using the default GET handler.
+            request.httpMethod = isExistingLocation ? "PUT" : "POST"
+            
+            //Provide an HTTPBody in request which is an instance of NSData object created by the NSJSONSerialization class to updating entity
+            let data = try JSONSerialization.data(withJSONObject: location.toDictionary(), options: [])
+            
+            request.httpBody = data
+            
+            //Tells the bodyParser on the server how to handle the bytes in the body
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let config = URLSessionConfiguration.default()
+            let session = URLSession(configuration: config)
+            let dataTask = session.dataTask(with: request as URLRequest, completionHandler: {(data: Data?, response: URLResponse?, error: NSError?) -> Void in
+                do {
+                    if error == nil {
+                        //Takes the modified entity returned from the server, parses and adds it to the local collection of Location objects
+                        let responseArray = [(try JSONSerialization.jsonObject(with: data!, options: []))]
+                        var objects = self.objects
+                        self.parseAndAddLocations(locations: responseArray, toArray: &objects!)
+                        self.objects = objects
+                    }
+                }
+                catch {
+                    print(error)
+                }
+            })
+            dataTask.resume()
+        } catch {
+            print(error)
+        }
     }
     
 }

@@ -64,16 +64,34 @@ class Location: NSObject {
         self.imageId = dictionary["imageId"]  as! String
         self.details = dictionary["details"]  as! String
         self.categories = dictionary["categories"] as! Array<Dictionary<String, AnyObject>>
+        self.id = dictionary["id"] as! String
     }
     
     func toDictionary() -> Dictionary<String, AnyObject> {
         var jsonable: Dictionary<String, AnyObject> = Dictionary<String, AnyObject>()
-        jsonable["name"] = self.name
-        jsonable["placename"] = self.placeName
-        jsonable["location"] = self.location
-        jsonable["details"] = self.details
-        jsonable["imageId"] = self.imageId
-        jsonable["categories"] = self.categories
+        //check that a value isn’t nil before you assign it to a NSDictionary
+        //avoids raising an NSInvalidArgumentException.
+        if (self.name != nil){
+            jsonable["name"] = self.name
+        }
+        if (self.placeName != nil){
+            jsonable["placename"] = self.placeName
+        }
+        if (self.location != nil){
+            jsonable["location"] = self.location
+        }
+        if (self.details != nil){
+            jsonable["details"] = self.details
+        }
+        if (self.imageId != nil){
+            jsonable["imageId"] = self.imageId
+        }
+        if (self.categories != nil){
+            jsonable["categories"] = self.categories
+        }
+        if (self.id != nil){
+            jsonable["id"] = self.id
+        }
         return jsonable
     }
 }
