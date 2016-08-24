@@ -11,6 +11,8 @@ var MongoClient = require('mongodb').MongoClient;
 var Server = require('mongodb').Server;
 var CollectionDriver = require('./collectionDriver').CollectionDriver;
 
+var FileDriver = require('./fileDriver').FileDriver;
+
 var app = express();
 //Use app at port 3000 by default
 app.set('port', process.env.PORT || 3000);
@@ -28,7 +30,8 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 //assumes the MongoDB instance is running locally on the default port of 27017
 var mongoHost = 'localHost';
-var mongoPort = 27017; 
+var mongoPort = 27017;
+var fileDriver;
 var collectionDriver;
 
 //creates a new MongoClient 
@@ -57,6 +60,9 @@ mongoClient.open(function(err, mongoClient) {
 	}
 	//open "MyDatabase" database, a MongoDB instance can contain multiple databases, all which have unique namespaces and unique data
 	var db = mongoClient.db("MyDatabase");
+
+  	fileDriver = new FileDriver(db);
+
 	collectionDriver = new CollectionDriver(db); //F
 });
 
@@ -84,6 +90,20 @@ app.get('/:a?/:b?/:c?', function (req,res) {
 	res.send(req.params.a + ' ' + req.params.b + ' ' + req.params.c);
 });
 */
+
+//Putting this before the generic /:collection routing means that
+//files are treated differently than a generic files collection
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', function (req, res) {
+	res.send('<html><body><h1>Hello World</h1></body></html>');
+});
+app.post('/files', function(req,res) {
+	fileDriver.handleUploadRequest(req,res);
+});
+app.get('/files/:id', function(req, res) {
+	fileDriver.handleGet(req,res);
+});
+
 
 //call the collectionDriver.findAll and collectionDriver.get methods respectively
 //and return either the JSON object or objects, an HTML document, or an error depending on the result.
@@ -128,7 +148,7 @@ app.get('/:collection/:entity', function(req, res) {
 	       		//return entity as a JSON document 
 	       		res.sendStatus(200, objs);
 	       	}
-	    });
+	       });
 	}
 	else {
 		res.sendStatus(400, {error: 'bad url', url: req.url});
@@ -148,15 +168,15 @@ app.post('/:collection', function(req, res) {
 			//returns the success code of HTTP 201 when the resource is created.
 			res.sendStatus(201, docs);
 		}
-    });
+	});
 });
 
 //match on the collection name and _id as shown
 app.put('/:collection/:entity', function(req, res) {
-    var params = req.params;
-    var entity = params.entity;
-    var collection = params.collection;
-    if (entity) {
+	var params = req.params;
+	var entity = params.entity;
+	var collection = params.collection;
+	if (entity) {
     	//passes the JSON object from the body to the new collectionDriver‘s update() method
     	collectionDriver.update(collection, req.body, entity, function(error, objs) {
     		if (error) {
@@ -168,31 +188,31 @@ app.put('/:collection/:entity', function(req, res) {
     			res.sendStatus(200, objs);
     		}
     	});
-   } else {
-       var error = { "message" : "Cannot PUT a whole collection" };
-       res.sendStatus(400, error);
-   }
+    } else {
+    	var error = { "message" : "Cannot PUT a whole collection" };
+    	res.sendStatus(400, error);
+    }
 });
 
 //match on the collection name and _id as shown
 app.delete('/:collection/:entity', function(req, res) {
-    var params = req.params;
-    var entity = params.entity;
-    var collection = params.collection;
-    if (entity) {
+	var params = req.params;
+	var entity = params.entity;
+	var collection = params.collection;
+	if (entity) {
     	//pass the parameters to collectionDriver‘s delete() method 
     	collectionDriver.delete(collection, entity, function(error, objs) {
-        	if (error) {
-        		res.sendStatus(400, error);
-        	}
-        	else {
-        		res.sendStatus(200, objs);
-        	}
-       });
-   } else {
-       var error = { "message" : "Cannot DELETE a whole collection" };
-       res.sendStatus(400, error);
-   }
+    		if (error) {
+    			res.sendStatus(400, error);
+    		}
+    		else {
+    			res.sendStatus(200, objs);
+    		}
+    	});
+    } else {
+    	var error = { "message" : "Cannot DELETE a whole collection" };
+    	res.sendStatus(400, error);
+    }
 });
 
 app.use(function (req,res) {
