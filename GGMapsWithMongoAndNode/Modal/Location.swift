@@ -64,7 +64,6 @@ class Location: NSObject {
         self.imageId = dictionary["imageId"]  as! String
         self.details = dictionary["details"]  as! String
         self.categories = dictionary["categories"] as! Array<Dictionary<String, AnyObject>>
-        self.id = dictionary["_id"] as! String
     }
     
     func toDictionary() -> Dictionary<String, AnyObject> {
@@ -75,7 +74,6 @@ class Location: NSObject {
         jsonable["details"] = self.details
         jsonable["imageId"] = self.imageId
         jsonable["categories"] = self.categories
-        jsonable["id"] = self.id
         return jsonable
     }
 }

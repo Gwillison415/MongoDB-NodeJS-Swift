@@ -38,10 +38,52 @@ class Locations: NSObject {
     func loadImage(location: Location) {
     }
     
-    func parseAndAddLocations(locations: [AnyObject], toArray destinationArray: [AnyObject]) {
+    //Iterate through the array of JSON dictionaries and create a new Location object for each item.
+    func parseAndAddLocations(locations: Array<AnyObject>, toArray destinationArray: inout Array<AnyObject>) {
+        for item in locations {
+            //Here you use a custom initializer to turn the deserialized JSON dictionary into an instance of Location.
+            let location = item as! Dictionary<NSObject, AnyObject>
+            destinationArray.append(location)
+        }
+        if (self.delegate != nil) {
+            //The model signals the UI that there are new objects available.
+            self.delegate.modelUpdated()
+        }
     }
     
     func importSomething() {
+        do {
+            let url = URL(string: try URL(fileURLWithPath: kBaseURL).appendingPathComponent(kLocations).absoluteString!)
+            let request = NSMutableURLRequest(url: url!)
+            request.httpMethod = "GET"
+            //"Accept" header use to determine type of response to send to the server
+            //Returned bytes will be JSON instead of the default format of HTML
+            request.addValue("application/json", forHTTPHeaderField: "Accept")
+            let config = URLSessionConfiguration.default()
+            let session = URLSession(configuration: config)
+            //Task for transferring data from a web service
+            let dataTask = session.dataTask(with: request as URLRequest, completionHandler: {(data: Data?, response: URLResponse?, error: NSError?) -> Void in
+                do {
+                    if error == nil {
+                        //deserialize the data
+                        let responseArray = (try JSONSerialization.jsonObject(with: data!, options: [])) as! Array<AnyObject>
+                        //Assuming the return value is an array of locations
+                        //parses the objects and notifies the view controller with the updated data
+                        
+                        var objects = self.objects
+                        self.parseAndAddLocations(locations: responseArray, toArray: &objects!)
+                        self.objects = objects
+                    }
+                }
+                catch {
+                    print(error)
+                }
+            })
+            //Start session
+            dataTask.resume()
+        } catch {
+            print(error)
+        }
     }
     
     func runQuery(queryString: String) {
