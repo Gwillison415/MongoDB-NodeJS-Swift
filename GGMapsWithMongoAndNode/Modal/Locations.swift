@@ -36,14 +36,90 @@ class Locations: NSObject {
     }
     
     func loadImage(location: Location) {
+        do {
+            //The image’s id is appended to the path along with the name of the endpoint: files.
+            let url = URL(string: try URL(fileURLWithPath: URL(fileURLWithPath: kBaseURL).appendingPathComponent(kFiles).absoluteString!).appendingPathComponent(location.imageId).absoluteString!)!
+            
+            let config = URLSessionConfiguration.default()
+            let session = URLSession(configuration: config)
+            
+            //The downloadTask is the third kind of NSURLSession, downloads a file to a temporary location and returns a URL to that location (rather than the raw NSData object, as the raw object can be rather large).
+            let task = session.downloadTask(with: url, completionHandler: {(fileLocation: URL?, response: URLResponse?, error: NSError?) -> Void in
+                if error == nil {
+                    //The temporary location is only guaranteed to be available during the completion block’s execution
+                    //so we must either load the file into memory, or move it somewhere else.
+                    let imageData = NSData(contentsOf: fileLocation!)!
+                    
+                    let image = UIImage(data: imageData as Data)
+                    if image == nil {
+                        print("unable to build image")
+                    }
+                    location.image = image!
+                    if (self.delegate != nil) {
+                        self.delegate.modelUpdated()
+                    }
+                }
+            })
+            task.resume()
+        } catch {
+            print(error)
+        }
+    }
+    
+    func saveNewLocationImageFirst(location: Location) {
+        do {
+            //files endpoint
+            let url = URL(string: try URL(fileURLWithPath: kBaseURL).appendingPathComponent(kFiles).absoluteString!)
+            let request = NSMutableURLRequest(url: url!)
+            
+            //using POST triggers handleUploadRequest of fileDriver to save the file.
+            request.httpMethod = "POST"
+            
+            //The Content-Type header is important for determining the file extension on the server.
+            //Setting the content type ensures the file will be saved appropriately on the server.
+            request.addValue("image/png", forHTTPHeaderField: "Content-Type")
+            
+            let config = URLSessionConfiguration.default()
+            let session = URLSession(configuration: config)
+            
+            //turns an instance of UIImage into PNG file data.
+            let bytes = UIImagePNGRepresentation(location.image)
+            
+            //Use uploadTask to send NSData to the server in the request itself.
+            //For example, upload tasks automatically set the Content-Length header based on the data length.
+            //Upload tasks also report progress and can run in the background, but neither of those features is used here.
+            let task = session.uploadTask(with: request as URLRequest, from: bytes!, completionHandler: {(data: Data?, response: URLResponse?, error: NSError?) -> Void in
+                do {
+                    if (error == nil) && ((response as! HTTPURLResponse).statusCode < 300) {
+                        let responseDict = try JSONSerialization.jsonObject(with: data!, options: [])
+                        //The response contains the new file data entity => save _id along with the location object for later retrieval.
+                        location.imageId = responseDict["_id"] as! String
+                        
+                        //Once the image is saved and _id recorded => the main Location entity can be saved to the server
+                        self.persist(location: location)
+                    }
+                }
+                catch {
+                    print(error)
+                }
+            })
+            task.resume()
+        } catch {
+            print(error)
+        }
     }
     
     //Iterate through the array of JSON dictionaries and create a new Location object for each item.
     func parseAndAddLocations(locations: Array<AnyObject>, toArray destinationArray: inout Array<AnyObject>) {
         for item in locations {
             //Here you use a custom initializer to turn the deserialized JSON dictionary into an instance of Location.
-            let location = item as! Dictionary<NSObject, AnyObject>
+            let location:Location = item as! Location
             destinationArray.append(location)
+            
+            //Checks for an imageId; if it finds one, it calls loadImage:.
+            if (location.imageId != nil) {
+                self.loadImage(location: location)
+            }
         }
         if (self.delegate != nil) {
             //The model signals the UI that there are new objects available.
@@ -92,11 +168,21 @@ class Locations: NSObject {
 //    func queryRegion(region: MKCoordinateRegion) {
 //    }
     
+    //Implement the ability to save Locations to the database
     func persist(location: Location) {
         if location.name == nil || location.name.characters.count == 0 {
             //input safety check
             return
         }
+        
+        //If there is an image, save it first
+        //If there is an image but no image id, then the image hasn’t been saved yet.
+        if location.image != nil && location.imageId == nil {
+            //Call the new method to save the image, and exits.
+            self.saveNewLocationImageFirst(location: location)
+            return
+        }
+
         do {
             let locations = try URL(fileURLWithPath: kBaseURL).appendingPathComponent(kLocations).absoluteString
             

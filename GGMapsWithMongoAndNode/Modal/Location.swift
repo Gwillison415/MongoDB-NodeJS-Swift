@@ -24,6 +24,8 @@ class Location: NSObject {
     var configuredBySystem:Bool!
     
     var latitude:CLLocationDegrees!
+    
+    ///backend property that links the entity in the locations collection to the entity in the files collection
     var imageId:String!
     
     
@@ -64,7 +66,7 @@ class Location: NSObject {
         self.imageId = dictionary["imageId"]  as! String
         self.details = dictionary["details"]  as! String
         self.categories = dictionary["categories"] as! Array<Dictionary<String, AnyObject>>
-        self.id = dictionary["id"] as! String
+        self.id = dictionary["_id"] as! String
     }
     
     func toDictionary() -> Dictionary<String, AnyObject> {
@@ -90,7 +92,7 @@ class Location: NSObject {
             jsonable["categories"] = self.categories
         }
         if (self.id != nil){
-            jsonable["id"] = self.id
+            jsonable["_id"] = self.id
         }
         return jsonable
     }
