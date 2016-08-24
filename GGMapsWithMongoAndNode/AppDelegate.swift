@@ -14,9 +14,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
     
-    var locations: Locations = Locations()
+    var locations: Locations!
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
+        self.locations = Locations()
+        self.locations.importSomething()
         GMSServices.provideAPIKey("AIzaSyCo5hS4FPcvDVBX5BMbRe0QF0Gef-rhDqg")
         return true
     }

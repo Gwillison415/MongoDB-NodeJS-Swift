@@ -28,8 +28,6 @@ class Location: NSObject {
     ///backend property that links the entity in the locations collection to the entity in the files collection
     var imageId:String!
     
-    
-    
     override init() {
         super.init()
         self.categories = Array<AnyObject>()

@@ -162,8 +162,9 @@ class Locations: NSObject {
         }
     }
     
-    func runQuery(queryString: String) {
-    }
+//    func runQuery(queryString: String) {
+//        
+//    }
     
 //    func queryRegion(region: MKCoordinateRegion) {
 //    }
