@@ -24,7 +24,7 @@ class FilterListViewController: UITableViewController {
     }
     
     
-    convenience init(selectedCategories selections: [AnyObject], deleagte delegate: CategoryDelegate) {
+    convenience init(selectedCategories selections: [AnyObject], delegate delegate: CategoryDelegate) {
         self.init(style: .plain)
         self.delegate = delegate
         self.selections = selections
